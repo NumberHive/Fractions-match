@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hive Match</title>
+<style>
+:root{
+  --honey:#F5A623; --honey-d:#B87400; --honey-l:#FFE3A3;
+  --navy:#1B2A49; --cream:#FFF8E7; --paper:#FFFFFF;
+  --p0:#1F9E8F; --p0l:#E4F6F3; --p1:#E4572E; --p1l:#FDEDE7;
+  --muted:#5F6B86; --good:#1E8E4E; --bad:#C62F2F;
+  --cols:4;
+  --cw: min(124px, calc((min(100vw, 640px) - 32px - (var(--cols) - 1) * 8px) / var(--cols)));
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--cream);color:var(--navy);font-family:ui-rounded,"Avenir Next Rounded","Nunito","Segoe UI",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:640px;margin:0 auto;padding:14px 16px 40px}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:10px}
+.brand{display:flex;align-items:center;gap:10px}
+.hex{width:30px;height:34px;background:var(--honey);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);display:inline-block}
+h1{font-size:24px;margin:0}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:2px solid var(--navy);border-radius:10px;overflow:hidden;background:#fff}
+.seg button{border:0;background:#fff;color:var(--navy);padding:6px 10px;font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--navy);color:#fff}
+.btn{border:2px solid var(--navy);background:var(--honey);color:var(--navy);border-radius:12px;padding:8px 14px;font:inherit;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 3px 0 var(--navy)}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--navy)}
+.btn.ghost{background:#fff}
+.btn:focus-visible,.seg button:focus-visible,.mc:focus-visible{outline:3px solid var(--navy);outline-offset:2px}
+details.how{background:#fff;border:2px solid var(--navy);border-radius:12px;padding:8px 12px;margin-bottom:10px;font-size:14px}
+details.how summary{cursor:pointer;font-weight:800}
+details.how ol{margin:8px 0 2px;padding-left:20px;line-height:1.45}
+.scorebar{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.sc{background:#fff;border:3px solid #D5D9E4;border-radius:14px;padding:6px 12px;display:flex;justify-content:space-between;align-items:baseline;font-weight:800;transition:border-color .15s, background .15s}
+.sc .n{font-size:28px}
+.sc.a0{--c:var(--p0);--cl:var(--p0l)}
+.sc.a1{--c:var(--p1);--cl:var(--p1l)}
+.sc.on{border-color:var(--c);background:var(--cl);box-shadow:0 3px 0 var(--c)}
+.sc .nm{color:var(--c)}
+.bannerrow{display:flex;gap:10px;align-items:stretch;margin-bottom:12px}
+#banner{flex:1;min-height:56px;border-radius:12px;padding:10px 12px;font-weight:700;font-size:14.5px;line-height:1.4;background:var(--honey-l);border:2px solid var(--honey-d)}
+#banner.good{background:#DDF4E6;border-color:var(--good)}
+#banner.bad{background:#FBE0E0;border-color:var(--bad)}
+#cont[hidden]{display:none}
+.board{display:grid;grid-template-columns:repeat(var(--cols), var(--cw));gap:8px;justify-content:center}
+.mc{position:relative;width:var(--cw);aspect-ratio:3/4;padding:0;border:0;background:none;perspective:700px;cursor:pointer;font:inherit}
+.mc .inner{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .38s}
+.mc.up .inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:calc(var(--cw) * .12);border:3px solid var(--navy);backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 rgba(27,42,73,.3)}
+.back{background:var(--navy);overflow:hidden}
+.back::before{content:"";width:46%;aspect-ratio:30/34;background:var(--honey);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
+.back::after{content:"";position:absolute;inset:5px;border:2px solid rgba(245,166,35,.45);border-radius:calc(var(--cw) * .08)}
+.front{background:var(--paper);transform:rotateY(180deg);font-size:calc(var(--cw) * .3);padding:3px}
+.front svg{width:100%;height:100%;display:block}
+.mc.m0 .front{background:var(--p0l);border-color:var(--p0)}
+.mc.m1 .front{background:var(--p1l);border-color:var(--p1)}
+.mc.m0,.mc.m1{cursor:default}
+.mc.pop .inner{animation:pop .5s ease-out}
+@keyframes pop{0%,100%{transform:rotateY(180deg) scale(1)}45%{transform:rotateY(180deg) scale(1.12)}}
+.fr{display:inline-flex;flex-direction:column;align-items:center;line-height:1.05;font-weight:800;color:var(--navy)}
+.fr .nu{padding:0 .18em .06em;border-bottom:.08em solid currentColor}
+.fr .de{padding-top:.06em}
+.mx{display:inline-flex;align-items:center;gap:.14em;color:var(--navy)}
+.mx .wh{font-size:1.3em;font-weight:800}
+.modal{position:fixed;inset:0;background:rgba(27,42,73,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10}
+.modal[hidden]{display:none}
+.panel{background:#fff;border:3px solid var(--navy);border-radius:18px;padding:20px;max-width:440px;width:100%;box-shadow:0 8px 0 rgba(27,42,73,.35);max-height:90vh;overflow:auto}
+.panel h3{margin:0 0 6px;font-size:24px}
+.panel p{margin:6px 0;line-height:1.45;font-size:15px}
+.finalrow{display:flex;justify-content:space-around;margin:12px 0;font-weight:800;text-align:center}
+.finalrow .big{font-size:36px;display:block}
+.recap{font-size:13px;color:var(--muted);line-height:1.6;margin:8px 0}
+.recap div{border-bottom:1px dashed #D5D9E4;padding:2px 0}
+@media (max-width:420px){ h1{font-size:20px} }
+@media (prefers-reduced-motion:reduce){ .mc .inner{transition:none} .mc.pop .inner{animation:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="hex"></span><h1>Hive Match</h1></div>
+    <div class="controls">
+      <div class="seg" id="segMode" role="group" aria-label="Opponent">
+        <button data-v="bot" aria-pressed="true">Play the bot</button>
+        <button data-v="friend" aria-pressed="false">Play a friend</button>
+      </div>
+      <div class="seg" id="segLevel" role="group" aria-label="Difficulty">
+        <button data-v="mild" aria-pressed="true">Mild</button>
+        <button data-v="medium" aria-pressed="false">Medium</button>
+        <button data-v="spicy" aria-pressed="false">Spicy</button>
+      </div>
+      <button class="btn ghost" id="btnNew">New game</button>
+    </div>
+  </header>
+
+  <details class="how">
+    <summary>How to play</summary>
+    <ol>
+      <li>All the cards start face down. On your turn, flip two cards.</li>
+      <li>If they are worth the same amount, you keep the pair and flip again. A pair is usually a number and a diagram, like 3/4 and a bar with 6 of 8 parts shaded.</li>
+      <li>If they do not match, they flip back and the other player goes. Remember where things are.</li>
+      <li>The player with the most pairs wins.</li>
+      <li>Mild uses simple fractions. Medium adds improper fractions and mixed numbers. Spicy uses unsimplified fractions like 6/12, so 1/2 can match 6/12 or a diagram cut into 8 parts.</li>
+      <li>Against the bot, the level also sets how good the bot's memory is.</li>
+    </ol>
+  </details>
+
+  <div class="scorebar">
+    <div class="sc a0" id="sc0"><span class="nm" id="nm0">You</span><span class="n" id="n0">0</span></div>
+    <div class="sc a1" id="sc1"><span class="nm" id="nm1">Hive Bot</span><span class="n" id="n1">0</span></div>
+  </div>
+
+  <div class="bannerrow">
+    <div id="banner" role="status" aria-live="polite"></div>
+    <button class="btn" id="cont" hidden>Continue</button>
+  </div>
+
+  <div class="board" id="board"></div>
+</div>
+
+<div class="modal" id="modal" hidden><div class="panel" id="panel"></div></div>
+
+<script>
+(() => {
+'use strict';
+const gcd = (a,b)=> b ? gcd(b, a % b) : a;
+const rnd = n => Math.floor(Math.random()*n);
+const pick = a => a[rnd(a.length)];
+const shuffle = a => { for (let i=a.length-1;i>0;i--){ const j=rnd(i+1); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const $ = id => document.getElementById(id);
+const FAST = () => !!window.__fast;
+
+const LV = {
+  mild:   {pairs: 6,  cap: 2,  lapse: .50, dens: [2,3,4,5,6,8], maxV: 1},
+  medium: {pairs: 8,  cap: 4,  lapse: .30, dens: [2,3,4,5,6,8], maxV: 3},
+  spicy:  {pairs: 10, cap: 5,  lapse: .25, dens: [2,3,4,5,6],   maxV: 3.5}
+};
+let setMode = 'bot', setLevel = 'mild', uid = 0;
+let G = null;
+
+/* ---------- pair generation ---------- */
+function valuePool(level){
+  const L = LV[level], out = [];
+  for (const q of L.dens) for (let p=1; p/q < L.maxV; p++) if (gcd(p,q) === 1) out.push({P:p,Q:q});
+  return out;
+}
+function mk(pid, v, kind, k){
+  const c = {pid, kind, k, P:v.P, Q:v.Q};
+  if (kind === 'mixed'){ const w = Math.floor(v.P/v.Q); c.w = w; c.n = (v.P - w*v.Q)*k; c.d = v.Q*k; }
+  else { c.n = v.P*k; c.d = v.Q*k; }
+  return c;
+}
+function makePair(pid, v, level){
+  const improper = v.P > v.Q;
+  const maxK = Math.max(1, Math.floor(12 / v.Q));
+  const shape = () => pick(['circle','bar']);
+  for (let t=0; t<400; t++){
+    let kinds, ks;
+    if (level === 'mild'){ kinds = ['num', shape()]; ks = [1,1]; }
+    else if (level === 'medium'){
+      kinds = improper ? pick([['mixed',shape()],['imp',shape()],['mixed','imp']]) : ['num', shape()];
+      ks = kinds.map(kd => (kd === 'circle' || kd === 'bar') ? pick([1,2].filter(x => x <= maxK)) : 1);
+    } else {
+      kinds = improper ? pick([['mixed',shape()],['imp',shape()],['mixed','imp'],['imp','imp'],['mixed',shape()]]) : pick([['num','num'],['num',shape()],['num',shape()],['num',shape()]]);
+      ks = kinds.map(() => 1 + rnd(maxK));
+      if (!ks.some(k => k > 1)) continue;
+    }
+    if (kinds[0] + ks[0] === kinds[1] + ks[1]) continue;
+    return [mk(pid, v, kinds[0], ks[0]), mk(pid, v, kinds[1], ks[1])];
+  }
+  return [mk(pid, v, 'num', 1), mk(pid, v, 'circle', 1)];
+}
+function buildCards(level){
+  const pool = valuePool(level), n = LV[level].pairs, chosen = [];
+  const used = c => chosen.some(x => x.P === c.P && x.Q === c.Q);
+  while (chosen.length < n){
+    let cand = null;
+    if (chosen.length && Math.random() < .5){
+      const b = pick(chosen);
+      const cous = pool.filter(c => !used(c) && (c.Q === b.Q || c.P === b.P || (c.P === b.Q && c.Q === b.P)));
+      if (cous.length) cand = pick(cous);
+    }
+    if (!cand){
+      let f = pool.filter(c => !used(c));
+      if (level !== 'mild'){ const proper = Math.random() < .4; const g = f.filter(c => proper ? c.P < c.Q : c.P > c.Q); if (g.length) f = g; }
+      cand = pick(f);
+    }
+    chosen.push(cand);
+  }
+  const cards = [];
+  chosen.forEach((v,i) => makePair(i, v, level).forEach(c => cards.push(c)));
+  shuffle(cards).forEach((c,i) => c.id = i);
+  return cards;
+}
+
+/* ---------- card faces ---------- */
+function fracHTML(w, n, d){
+  const f = `<span class="fr"><span class="nu">${n}</span><span class="de">${d}</span></span>`;
+  return w ? `<span class="mx"><span class="wh">${w}</span>${f}</span>` : f;
+}
+function sliceD(cx, cy, r, q, i){
+  const a0 = -Math.PI/2 + i*2*Math.PI/q, a1 = a0 + 2*Math.PI/q;
+  const x0 = cx + r*Math.cos(a0), y0 = cy + r*Math.sin(a0), x1 = cx + r*Math.cos(a1), y1 = cy + r*Math.sin(a1);
+  return `M${cx},${cy} L${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${(a1-a0) > Math.PI ? 1 : 0} 1 ${x1.toFixed(2)},${y1.toFixed(2)} Z`;
+}
+function diagramSVG(c){
+  const q = c.d, n = Math.ceil(c.n / c.d);
+  let rem = c.n, s = '';
+  const sw = q >= 10 ? .8 : 1.3;
+  if (c.kind === 'circle'){
+    const r = n === 1 ? 42 : n === 2 ? 27 : 22;
+    for (let i=0;i<n;i++){
+      let cx, cy;
+      if (n === 1){ cx = 60; cy = 50; } else if (n === 2){ cx = 32 + i*56; cy = 50; } else { cx = 32 + (i%2)*56; cy = 26 + Math.floor(i/2)*48; }
+      const k = Math.min(q, rem); rem -= k;
+      for (let j=0;j<q;j++) s += `<path d="${sliceD(cx,cy,r,q,j)}" fill="${j<k?'#F5A623':'#FFF3D1'}" stroke="#1B2A49" stroke-width="${sw}" stroke-linejoin="round"/>`;
+      s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#1B2A49" stroke-width="2"/>`;
+    }
+  } else {
+    const gap = 7, h = Math.min(30, (96 - (n-1)*gap) / n), total = n*h + (n-1)*gap, y0 = (100 - total)/2, cw = 112 / q;
+    for (let i=0;i<n;i++){
+      const k = Math.min(q, rem); rem -= k;
+      const y = y0 + i*(h+gap);
+      for (let j=0;j<q;j++) s += `<rect x="${(4 + j*cw).toFixed(2)}" y="${y.toFixed(2)}" width="${cw.toFixed(2)}" height="${h.toFixed(2)}" fill="${j<k?'#F5A623':'#FFF3D1'}" stroke="#1B2A49" stroke-width="${sw}"/>`;
+      s += `<rect x="4" y="${y.toFixed(2)}" width="112" height="${h.toFixed(2)}" fill="none" stroke="#1B2A49" stroke-width="2"/>`;
+    }
+  }
+  return `<svg viewBox="0 0 120 100" aria-hidden="true">${s}</svg>`;
+}
+function faceHTML(c){
+  if (c.kind === 'circle' || c.kind === 'bar') return diagramSVG(c);
+  if (c.kind === 'mixed') return fracHTML(c.w, c.n, c.d);
+  return fracHTML(0, c.n, c.d);
+}
+function label(c){
+  if (c.kind === 'mixed') return `${c.w} ${c.n}/${c.d}`;
+  if (c.kind === 'circle') return `circle ${c.n}/${c.d}`;
+  if (c.kind === 'bar') return `bar ${c.n}/${c.d}`;
+  return `${c.n}/${c.d}`;
+}
+function aria(c){
+  if (c.kind === 'circle') return `Circle diagram, ${c.n} of ${c.d} parts shaded`;
+  if (c.kind === 'bar') return `Bar diagram, ${c.n} of ${c.d} parts shaded`;
+  if (c.kind === 'mixed') return `${c.w} and ${c.n} over ${c.d}`;
+  return `${c.n} over ${c.d}`;
+}
+function worth(c){ return c.P > c.Q ? `${Math.floor(c.P/c.Q)} ${c.P % c.Q}/${c.Q}` : `${c.P}/${c.Q}`; }
+
+/* ---------- game ---------- */
+const names = () => setMode === 'bot' ? ['You', 'Hive Bot'] : ['Player 1', 'Player 2'];
+const isBotTurn = () => G.mode === 'bot' && G.turn === 1;
+function later(fn, ms){
+  const gid = G.gid;
+  const id = setTimeout(() => { if (G && G.gid === gid) fn(); }, FAST() ? 0 : ms);
+  return id;
+}
+function setCols(){
+  const total = LV[G ? G.level : setLevel].pairs * 2;
+  const wide = window.innerWidth >= 560;
+  $('board').style.setProperty('--cols', wide && total % 5 === 0 ? 5 : 4);
+  document.documentElement.style.setProperty('--cols', wide && total % 5 === 0 ? 5 : 4);
+}
+function newGame(){
+  if (G) clearTimeout(G.timer);
+  const level = setLevel;
+  G = {gid: (G ? G.gid : 0) + 1, mode: setMode, level, cards: buildCards(level), up: new Set(), matched: new Map(),
+       turn: 0, first: null, busy: false, scores: [0,0], mem: [], mm: null, found: [], plan: null, over: false, timer: null, msg: '', mtype: ''};
+  $('modal').hidden = true;
+  const nm = names();
+  $('nm0').textContent = nm[0]; $('nm1').textContent = nm[1];
+  setCols(); buildBoard();
+  turnMsg(); render();
+  if (isBotTurn()) later(botStep, 800);
+}
+function buildBoard(){
+  $('board').innerHTML = G.cards.map((c,i) =>
+    `<button class="mc" data-i="${i}" aria-label="Face down card ${i+1}"><span class="inner"><span class="face back"></span><span class="face front">${faceHTML(c)}</span></span></button>`).join('');
+}
+function msg(t, type = ''){ G.msg = t; G.mtype = type; }
+function turnMsg(){
+  const nm = names();
+  if (isBotTurn()) msg('Hive Bot is thinking...');
+  else if (G.mode === 'bot') msg('Your turn. Flip two cards and look for a match.');
+  else msg(`${nm[G.turn]}, flip two cards.`);
+}
+function render(){
+  const btns = $('board').children;
+  for (let i=0;i<btns.length;i++){
+    const b = btns[i], c = G.cards[i], m = G.matched.has(i);
+    const up = m || G.up.has(i);
+    b.classList.toggle('up', up);
+    b.classList.toggle('m0', m && G.matched.get(i) === 0);
+    b.classList.toggle('m1', m && G.matched.get(i) === 1);
+    b.setAttribute('aria-label', up ? aria(c) : `Face down card ${i+1}`);
+  }
+  $('n0').textContent = G.scores[0]; $('n1').textContent = G.scores[1];
+  $('sc0').classList.toggle('on', !G.over && G.turn === 0);
+  $('sc1').classList.toggle('on', !G.over && G.turn === 1);
+  const b = $('banner'); b.textContent = G.msg; b.className = G.mtype;
+  $('cont').hidden = !G.mm;
+}
+function remember(i){
+  const cap = LV[G.level].cap;
+  G.mem = G.mem.filter(x => x !== i); G.mem.push(i);
+  while (G.mem.length > cap) G.mem.shift();
+}
+function flip(i){
+  if (G.over || G.busy || G.matched.has(i) || G.up.has(i)) return;
+  const c = G.cards[i];
+  G.up.add(i); remember(i);
+  if (G.first === null){
+    G.first = i;
+    msg(isBotTurn() ? 'Hive Bot flipped a card...' : 'Now flip a second card.');
+    return render();
+  }
+  const a = G.first, b = i, ca = G.cards[a];
+  G.first = null; G.busy = true;
+  if (ca.pid === c.pid){
+    G.matched.set(a, G.turn); G.matched.set(b, G.turn);
+    G.up.delete(a); G.up.delete(b);
+    G.mem = G.mem.filter(x => x !== a && x !== b);
+    G.scores[G.turn]++;
+    G.found.push(`${label(ca)} = ${label(c)}`);
+    const nm = names();
+    msg(`Match. ${label(ca)} = ${label(c)}. ${nm[G.turn]} ${G.turn === 0 && G.mode === 'bot' ? 'get' : 'gets'} a point and ${G.turn === 0 && G.mode === 'bot' ? 'go' : 'goes'} again.`, 'good');
+    render();
+    const mine = G.matched.get(a);
+    const el = $('board').children;
+    el[a].classList.add('pop'); el[b].classList.add('pop');
+    G.timer = later(() => {
+      G.busy = false;
+      if (G.matched.size === G.cards.length) return finish();
+      if (isBotTurn()) botStep(); else { turnMsg(); render(); }
+    }, 1000);
+  } else {
+    G.mm = {a, b};
+    msg(`Not a match. ${label(ca)} is worth ${worth(ca)}. ${label(c)} is worth ${worth(c)}.`, 'bad');
+    render();
+    G.timer = later(resolveMismatch, G.mode === 'bot' && G.turn === 1 ? 2400 : 3200);
+  }
+}
+function resolveMismatch(){
+  if (!G.mm) return;
+  clearTimeout(G.timer);
+  G.up.delete(G.mm.a); G.up.delete(G.mm.b); G.mm = null;
+  G.turn = 1 - G.turn; G.busy = false;
+  turnMsg(); render();
+  if (isBotTurn()) G.timer = later(botStep, 700);
+}
+
+/* ---------- bot ---------- */
+function botFirst(){
+  const L = LV[G.level];
+  const open = G.cards.map((_,i)=>i).filter(i => !G.matched.has(i) && !G.up.has(i));
+  if (Math.random() >= L.lapse){
+    const by = {};
+    for (const i of G.mem){ if (G.matched.has(i)) continue; const p = G.cards[i].pid; (by[p] = by[p] || []).push(i); }
+    const pair = Object.values(by).find(g => g.length >= 2);
+    if (pair) return {a: pair[0], b: pair[1]};
+  }
+  const unknown = open.filter(i => !G.mem.includes(i));
+  return {a: pick(unknown.length ? unknown : open), b: null};
+}
+function botSecond(a){
+  const L = LV[G.level], pid = G.cards[a].pid;
+  const known = G.mem.find(i => i !== a && !G.matched.has(i) && G.cards[i].pid === pid);
+  if (known !== undefined && Math.random() >= L.lapse) return known;
+  const open = G.cards.map((_,i)=>i).filter(i => i !== a && !G.matched.has(i) && !G.up.has(i));
+  const unknown = open.filter(i => !G.mem.includes(i));
+  return pick(unknown.length ? unknown : open);
+}
+function botStep(){
+  if (G.over || !isBotTurn() || G.busy) return;
+  const plan = botFirst();
+  flip(plan.a);
+  G.timer = later(() => {
+    if (G.over || !isBotTurn()) return;
+    flip(plan.b !== null ? plan.b : botSecond(plan.a));
+  }, 950);
+}
+
+/* ---------- finish ---------- */
+function finish(){
+  G.over = true;
+  const [a, b] = G.scores, nm = names();
+  const head = a === b ? 'A draw' : G.mode === 'bot' ? (a > b ? 'You win' : 'Hive Bot wins') : `${nm[a > b ? 0 : 1]} wins`;
+  $('panel').innerHTML = `
+    <h3>${head}</h3>
+    <div class="finalrow"><div><span class="big" style="color:var(--p0)">${a}</span>${nm[0]}</div><div><span class="big" style="color:var(--p1)">${b}</span>${nm[1]}</div></div>
+    <p>Every pair on the board, in the order they were found:</p>
+    <div class="recap">${G.found.map(f => `<div>${f}</div>`).join('')}</div>
+    <div style="text-align:right;margin-top:10px"><button class="btn" id="again">Play again</button></div>`;
+  $('modal').hidden = false;
+  $('again').addEventListener('click', newGame);
+  msg('All pairs found.', 'good');
+  render();
+}
+
+/* ---------- wiring ---------- */
+$('board').addEventListener('click', e => {
+  const btn = e.target.closest('.mc');
+  if (!btn || !G || G.over || G.busy || isBotTurn()) return;
+  flip(+btn.dataset.i);
+});
+$('cont').addEventListener('click', () => { if (G && G.mm) resolveMismatch(); });
+$('btnNew').addEventListener('click', newGame);
+function seg(id, cb){
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    $(id).querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+    cb(b.dataset.v); newGame();
+  });
+}
+seg('segMode', v => setMode = v);
+seg('segLevel', v => setLevel = v);
+window.addEventListener('resize', setCols);
+window.HM = {newGame, state: () => G, flip, set: (m,l) => { setMode = m; setLevel = l; }, buildCards};
+newGame();
+})();
+</script>
+</body>
+</html>
